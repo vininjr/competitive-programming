@@ -1,0 +1,245 @@
+\chapter{Trabalhos Relacionados}
+\label{cap:trabalhos-relacionados}
+
+Neste capítulo, serão mostrados alguns trabalhos que foram utilizados como base e referência para esta monografia, sendo abordado as técnicas utilizadas e os principais resultados. Na seção \ref{sec:trabalho-relacionado-a} são mostrados alguns trabalhos que utilizam da técnica de Branch and Bound, já na seção \ref{sec:trabalho-relacionado-b} são mostrados alguns trabalhos que utilizam Bonecas Russas.
+
+\section{Algoritmos Branch and Bound}
+\label{sec:trabalho-relacionado-a}
+
+Em \citeonline{tomita2003efficient} um algoritmo baseado no método branch and bound é 
+desenvolvido para encontrar uma clique máxima em um grafo arbitrário. O principal foco deste algoritmo esta em reduzir o espaço de busca com baixa sobrecarga de problemas. Uma técnica de  ordenação de vértice baseada em coloração aproximada é utilizada. Dada uma partição de vértices $R$, se é necessário $k$ cores para colorir $R$, então a clique máxima de $R$ deve ter tamanho menor ou igual a $k$. Embora não exista um algoritmo eficiente para coloração ótima, um algoritmo guloso é utilizado.
+
+Como resultados o algoritmo desenvolvido em  \citeonline{tomita2003efficient} se mostrou superior aos algoritmos desenvolvidos anteriormente para grafos aleatórios, principalmente na redução do espaço de busca proporcionado pela técnica coloração aproximada. A técnica de coloração aproximada se mostrou muito eficiente quando usada em conjunto com Branch and Bound.
+
+\subsection{Algoritmo proposto em \citeonline{mccreesh2014exact}\label{sec:proposta1}}
+
+Em \citeonline{mccreesh2014exact} é desenvolvido um algoritmo para o  \acrshort{PBIBM}. Este
+algoritmo utiliza-se da técnica de Branch and Bound e de um procedimento de quebra de simetria na expansão dos vértices. Dada a biclique $\{A,B\}$, são consideradas todas as possibilidades de um vértice pertencer ao conjunto $A$ no topo da busca, para evitar que em algum momento ele seja adicionado ao conjunto $B$.
+
+Uma ordem estática dos vértices é definida para particionar as cliques, esta ordem é fixa e evita que a reordenação dos vértices seja usada frequentemente. 
+Um limite é usado baseado em partições de cliques, utiliza estrategia visto em \citeonline{tomita2003efficient}. 
+O Teorema \ref{teorema1} demonstra o limite.
+
+\begin{teorema}\label{teorema1}
+    Seja $G=(V,E)$ um grafo arbitrário, se $G$ pode ser particionado em $k$ cliques, então $k$ é um \textit{Upper Bound} para um conjunto independente máximo em $G$, pois cada vértice do conjunto independente estaria em uma clique.
+\end{teorema}
+ 
+\begin{prova}
+   Suponha por contradição que exista um conjunto independente de tamanho $k+1$. Como $G$ é particionado em $k$ cliques, isso necessariamente ocasionaria de dois vértice do conjunto independente estarem contidos em uma clique, e serem obviamente vértices adjacentes. Isto seria uma contradição, já que um conjunto independente não permite que nenhum de seus vértices sejam adjacentes. Validando assim o teorema.
+ \end{prova}
+
+Um algoritmo simples para o PBIBM utilizando Branch and Bound pode ser visto no Algoritmo \ref{alg:algoritmo1}. Este algoritmo alterna na construção de dois conjuntos independentes $A$ e $B$ que formam a biclique $\{A,B\}$. Neste algoritmo $P_a$ representa todos os vértices candidatos a solução do conjunto $A$ e $P_b$ os candidatos ao conjunto $B$, inicialmente ambos são inicializados com todos os vértices do grafo(Todos os candidatos possíveis).
+
+    \begin{algorithm}
+        \caption{Algoritmo para o PBIBM}
+        \label{alg:algoritmo1}
+            \begin{algorithmic}[1]
+                \Function{simpleBiclique}{$G=(V,E)$}
+                    \State $(A_{max}, B_{max})$ $\gets$ $(\emptyset,\emptyset)$
+                    \State EXPAND$(G,\emptyset,\emptyset,V(G),V(G),A_{max},B_{max})$
+                    \State \Return $(A_{max}, B_{max})$
+                \EndFunction
+                
+                \Function{EXPAND}{$G, A, B,P_a,P_b,A_{max},B_{max}$}\label{line:expand}
+                    \For{$v \in$ $P_a$}
+                        \If {|A| + |$P_a$| > $A_{max}$ e |B| + |$P_b$| > $B_{max}$}
+                            \State A $\gets$ A $\cup$ $\{v\}$
+                            \State $P_a$ $\gets$ $P_a$ $\setminus$ $\{v\}$
+                            \State $P_a'$ $\gets$ $P_a$ $\cap$ $\overline{N(v)}$ \label{line11}
+                            \State $P_b'$ $\gets$ $P_b$ $\cap$ $N(v)$
+                            \If {|A| = |B| e |A| > |$A_{max}$|}
+                                \State $(A_{max}, B_{max})$ $\gets$ $(A,B)$
+                            \EndIf
+                            \If{$P_b'$ $\neq$ $\emptyset$}
+                                \State EXPAND$(G,B,A,P_b',P_a',B_{max},A_{max})$
+                            \EndIf
+                            \State A $\gets$ A $\setminus$ $\{v\}$
+                        \EndIf
+                    \EndFor
+                \EndFunction
+                
+            \end{algorithmic}
+    \end{algorithm}
+    
+    
+Note que na chamada recursiva da função \textit{EXPAND}, um vértice $v$ é escolhido de $P_a$ e adicionado a $A$. Isso gera algumas implicações, um novo $P_a'$ é construído removendo os elementos que são adjacentes a $v$ em $P_a$, isto é necessário já que $A$ deve ser um conjunto independente. Um novo $P_b'$ também é construindo, porem desta vez filtrando os vértices não adjacentes a $v$ em $P_b$, já que todos vértices de $A$ devem ser adjacente a todos de $B$. Se $P_b'$ não for vazio, então podemos adicionar novos elementos a $B$, assim nos chamamos a função recursiva e alternamos entre os conjuntos $A$ e $B$ para adicionar os vértices nos dois lados em ordem alternada. Depois de considerar a situação em que o vértice $v$ pertence ao conjunto $A$, o algoritmo considera a situação do vértice não pertencer ao conjunto, nesse caso o algoritmo continua o loop e seleciona outro vértice candidato.
+
+Este algoritmo é uma implementação bem simples mas não é eficiente. O algoritmo explora um espaço de busca muito grande, boa parte desnecessário, isso é causado pelo bound que leva em consideração o tamanho absoluto dos conjuntos. Note também que ao considerar todas as possíveis soluções com $v \in A$ e depois considerar com $v \notin A$, isto não impedi que em algum momento ao considerar um $v' \in A$ podemos por consequência considerar $v \in B$, isto poderia causar simetria na solução. No Algoritmo \ref{alg:algoritmo2} podemos observar uma implementação que utiliza um bound aperfeiçoado baseado em partições de cliques, além de um estrategia para eliminar a simetria e uma ordenação inicial de vértices.  
+    
+    \begin{algorithm}[]
+        \caption{Algoritmo melhorado para o PBIBM}
+        \label{alg:algoritmo2}
+            \begin{algorithmic}[1]
+                \Function{improvedBiclique}{$G=(V,E)$}
+                    \State $(A_{max}, B_{max})$ $\gets$ $(\emptyset,\emptyset)$
+                    \State permute G baseado no grau dos vértices \label{permute}
+                    \State EXPAND$(G,\emptyset,\emptyset,V(G),V(G),A_{max},B_{max})$
+                    \State \Return $(A_{max}, B_{max})$(unpermuted)
+                \EndFunction
+               
+                \Function{CLIQUESORT}{$G,P)$}
+                    \State bounds $\gets$ vetor de inteiros
+                    \State order $\gets$ vetor de inteiros
+                    \State P$'$ $\gets$ P
+                    \State $k \gets 1$
+                    \State $i \gets 1$
+                    \While{P$'$ $\neq$ $\emptyset$}
+                        \State Q $\gets$ P$'$
+                        \While{Q $\neq$ $\emptyset$}
+                            \State v $\gets$ primeiro elemento de Q
+                            \State P$'$ $\gets$ P$'$ $\setminus$ $\{v\}$
+                            \State Q $\gets$ Q $\cap$ N(G, v)
+                            \State $bounds[i] \gets k$
+                            \State $order[i] \gets v$
+                            \State $i \gets i + 1$
+                        \EndWhile
+                        \State $k \gets k + 1$
+                    \EndWhile
+                \EndFunction
+              
+                \Function{EXPAND}{$G, A, B,P_a,P_b,A_{max},B_{max}$}
+                    \State ($bounds,order$) $\gets$ CLIQUESORT(G,$P_a$)
+                    \For{i $\gets$ |$P_a$| $\textbf{downto}$ 1}{}{}
+                        \If {$bounds[i]$ + |A| > $A_{max}$ e |B| + |$P_b$| > $B_{max}$}
+                            \State $v \gets order[i]$
+                            \State A $\gets$ A $\cup$ $\{v\}$
+                            \State $P_a$ $\gets$ $P_a$ $\setminus$ $\{v\}$
+                            \State $P_a'$ $\gets$ $P_a$ $\cap$ $\overline{N(v)}$
+                            \State $P_b'$ $\gets$ $P_b$ $\cap$ $N(v)$
+                            \If {|A| = |B| e |A| > |$A_{max}$|}
+                                \State $(A_{max}, B_{max})$ $\gets$ $(A,B)$
+                            \EndIf
+                            \If{$P_b'$ $\neq$ $\emptyset$}
+                                \State EXPAND$(G,B,A,P_b',P_a',B_{max},A_{max})$
+                            \EndIf
+                            \State A $\gets$ A $\setminus$ $\{v\}$
+                            \If{$B \neq \emptyset$}
+                                \State $P_b \gets P_b \setminus \{v\}$
+                            \EndIf
+                        \EndIf
+                    \EndFor
+                \EndFunction
+                
+            \end{algorithmic}
+    \end{algorithm}
+
+ Na linha \ref{permute} o grafo é permutado, primeiramente os vértices são ordenados de forma gulosa baseado no grau, afim de tentar melhorar a obtenção de cliques. A chance de encontrar uma partição de cliques ótima aumenta se vértices de maior grau forem usados primeiro.
+
+ A função \textit{CLIQUESORT} no Algoritmo \ref{alg:algoritmo2} produz dois arrays, um array de $bounds$ e um de $order$. O array $order$ contem os vértices de $P$ em ordem arbitraria. O array de $bounds$ contém limites(\textit{bounds}) para o tamanho do maior conjunto independente, isto é, o subgrafo induzido pelos vértices $v_1,v_2,\dots,v_n$ de $order$ não pode ter um conjunto independente maior que $bounds[n]$. 
+ 
+ Os arrays são criados da seguinte forma, a variável $P'$ contem inicialmente todos os vértices que podem formar uma clique, ou seja, todos os vértices do conjunto $P$. Enquanto $P'$ não for vazio ainda podemos construir uma nova clique, então $Q$ guarda a clique construída ate então, inicialmente considera-se que todos os vértices de $P'$ formam uma clique. Um vértice $v \in Q$ é selecionado e então todos os vértices em $Q$ que não são adjacentes a $v$ são filtrados, note que depois que um vértice é selecionado pra pertencer a uma clique ele deve ser removido de $P'$ para que não seja utilizado em outra clique posteriormente. O procedimento continua ate que $Q$ seja vazio, dai repetimos o procedimento atualizando $Q$ com o novo $P'$ e começamos a construir uma nova clique. Vale salientar que este algoritmo $CLIQUESORT$ é guloso.
+ 
+ A partir da função $CLIQUESORT$ obtemos um limite superior aperfeiçoado. Ao selecionar um vértice de $P_a$, ao invés de utilizar $|P_a|$ como limite, utiliza-se o array $bounds$ para tal finalidade. Além disso o array $order$ é acessado da direita pra esquerda.
+ 
+ Note que ainda assim este algoritmo tem uma pequena desvantagem, no caso em que $P_a$ é um conjunto independente, a função $CLIQUESORT$ seria desnecessária. Pois um bound eficiente naturalmente aconteceria.
+ 
+Como resultados este trabalho contribuiu com um algoritmo eficaz para encontrar um 
+conjunto independente em um grafo arbitrário. Além de ganho com a exclusão da 
+simetria, bom desempenho para grafos com quantidades grandes de vértices e arestas.
+    
+
+\section{Algoritmos Bonecas Russas}
+\label{sec:trabalho-relacionado-b}
+
+Em \citeonline{correa2014bit} um algoritmo baseado no método das Bonecas Russas é desenvolvido para encontrar uma clique de cardinalidade máxima em um grafo arbitrário. 
+Quando comparado com o método Branch and Bound, a principal diferença do método das Bonecas Russas é que os nós de sua árvore de busca correspondem aos subproblemas de decisão, em vez dos subproblemas de otimização do método Branch e Bound.
+
+Em relação com implementações anteriores deste método na literatura, várias melhorias são apresentadas. Algumas delas são adaptações de técnicas já empregadas com sucesso em algoritmos Branch e Bound, como o uso de coloração aproximada com o intuito de podar os subproblemas e operações paralelas em bits.
+
+Como resultados o algoritmo superou a maioria dos algoritmos da literatura para grafos densos. Em alguns casos de instancia tendo como desempenho duas vezes mais rápidos.
+Na próxima seção será abordado o algoritmo base para desenvolvimento do algoritmo desta monografia. Este algorítimo é baseado no método das bonecas russas.
+
+ \subsection{Algoritmo proposto por \citeonline{alan2016biclique} \label{sec:proposta2}}
+ 
+     Em \citeonline{alan2016biclique} é desenvolvido um algoritmo exato baseado nas técnicas de
+    branch and bound e bonecas russas para resolver o \acrshort{PBIBM}, este algoritmo se baseia no algoritmo proposto por 
+    \citeonline{mccreesh2014exact} citado na seção \ref{sec:trabalho-relacionado-a}. 
+    Algumas adaptações foram aperfeiçoadas, como a  não utilização do algoritmo de 
+    $cliqueSort$, 
+    não utiliza partição em cliques para ordenar os vértices. Outra mudança em relação 
+    ao algoritmo de \citeonline{mccreesh2014exact} é a utilização de cortes via método das  
+    Bonecas Russas.
+    
+    O primeiro corte ocorre quando não é possível com o tamanho da solução alcançada, 
+    somado a quantidade de candidatos, ultrapassar o valor máximo atual. O segundo corte ocorre quando ao selecionar um determinado vértice do conjunto de candidatos, se a 
+    melhor solução que pode ser encontrada com aquele vértice, somada com o numero de 
+    candidatos, não consegue ser melhor que a solução já encontrada, neste caso o 
+    subproblema é podado.
+    
+    O algoritmo proposto por \citeonline{alan2016biclique} que será mostrado nesta seção é o algoritmo base para a implementação da nossa solução para o problema. \citeonline{alan2016biclique} utiliza a técnica de Branch and Bound utilizada em \citeonline{mccreesh2014exact}, como mostrado na seção \ref{sec:proposta1}, com o incremento da técnica de Bonecas Russas, baseado na técnica desenvolvida em \citeonline{trukhanov2013algorithms}. Conforme mostrado no Algoritmo \ref{alg:algoritmo3} desenvolvido por \citeonline{alan2016biclique}.
+ 
+ 
+     \begin{algorithm}
+        \caption{Algoritmo das Bonecas Russas desenvolvido em \citeonline{alan2016biclique}}
+        \label{alg:algoritmo3}
+            \begin{algorithmic}[1]
+                \Function{bonecasRussas}{$G, A, B$}
+                    \State $\uppi$ $\gets$ $ORDENACAO(G)$
+                    \State $RECONSTRUCAOADJACENCIA(G,\uppi)$
+                    \State R $\gets$ vetor de inteiros
+                    \For{i $\gets$ 1 ate $|V_G|$}{}{}
+                    \State $v$ $\gets$ $V_G[i]$
+                    \State PA $\gets$ $V_G \setminus \overline{N_G(v)}$
+                    \State PB $\gets$ $V_G \setminus N_G(v)$
+                    \State A\textsuperscript{'} $\gets$ $v$
+                    \State B\textsuperscript{'} $\gets$ $\emptyset$
+                    \State $NOVOEXPAND(G,B\textsuperscript{'},A\textsuperscript{'},PB,PA,B,A,R)$
+                    \State R$[v]$ $\gets$ $|A|$
+                    \EndFor
+                \EndFunction
+                
+            \end{algorithmic}
+    \end{algorithm}
+ 
+ O algoritmo funciona da seguinte forma, primeiramente o conjunto de vértices é ordenado, logo após um conjunto $R$ onde as melhores soluções para cada subproblema serão armazenados é criado. Para cada subproblema criam-se seus conjuntos candidatos e considera-se que o vértice $v$ faz parte da solução. Após a chamada da função $EXPAND$, $|A|$ possui a melhor solução encontrada para o subproblema e esse valor pode ser armazenado em $R$. Cada boneca gerada pelo o Algoritmo \ref{alg:algoritmo3} é resolvida pelo Algoritmo \ref{alg:algoritmo4}. 
+ 
+      \begin{algorithm}
+        \caption{Algoritmo expand desenvolvido em \citeonline{alan2016biclique}}
+        \label{alg:algoritmo4}
+            \begin{algorithmic}[1]
+                \Function{NOVOEXPAND}{$G, A, B, PA, PB, A_{max}, B_{max}, R$}
+                \If {|A| = |B| e |A| > |$A_{max}$|}
+                    \State $(A_{max}, B_{max})$ $\gets$ $(A,B)$
+                \EndIf
+                \While{|A| + |PA| > $A_{max}$ e |B| + |PB| > $B_{max}$}
+                    \State $v \gets last$(PA)
+                    \If{$max$(A,B) + R[$v$] $\leq$ |$A_{max}$|}
+                        \Return
+                    \EndIf
+                    \State A$'$ $\gets$ A $\cup$ $\{v\}$
+                    \State PA $\gets$ PA $\setminus$ $\{v\}$
+                    \State PA$'$ $\gets$ PA $\setminus$ $N_G(v)$
+                    \State PB$'$ $\gets$ PB $\setminus$ $\overline{N_G(v)}$
+                    \State NOVOEXPAND(G, B$'$, A$'$, PB$'$, PA$'$, $B_{max}$, $A_{max}$, R)
+                \EndWhile
+
+                \EndFunction
+                
+            \end{algorithmic}
+    \end{algorithm}
+ 
+ O algoritmo \textit{NOVOEXPAND} é baseado no algoritmo \textit{EXPAND} desenvolvido em \citeonline{mccreesh2014exact}. As únicas  diferenças são: Não se utiliza o algoritmo de ordenação de cliques, o $cliqueSort$. Utiliza-se de podas através das Bonecas Russas. Não utiliza ordem estática dos vértices.
+ 
+ Em \citeonline{mccreesh2014exact} um $Bound$ provinha-se da função $cliqueSort$, com objetivo de limitar superiormente um conjunto independente máximo que continha um vértice $v$, com o objetivo de não visitar todo o espaço de busca. Em \citeonline{alan2016biclique} o $Bound$ é utilizado através de $R$, da seguinte forma, se $R[v]$ é a melhor solução possível com o vértice $v$, então ao selecionar $v$ para uma nova solução, existe a possibilidade de adicionar no máximo $R[v]$ vértices a solução. Assim a melhor solução possível é o máximo entre $A$ e $B$ somado com $R[v]$. Da mesma forma se a melhor solução possível não ultrapassa o valor, não adianta continuar, pois não téria resultados melhores.
+ 
+     
+Como resultados foi obtido um algoritmo exato pra resolver o \acrshort{PBIBM}, embora quando
+comparado com \citeonline{mccreesh2014exact} não tenham tão bons tempos de execução, 
+superando o próprio em apenas um caso de instancia. Este caso de instancia reduzindo
+o tempo de 94 segundos no algoritmo de \citeonline{mccreesh2014exact} para menos de 1 
+segundo. Foram usadas instancias de grafos obtidas a partir de \citeonline{dimacs}. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
